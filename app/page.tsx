@@ -1,11 +1,13 @@
+'use client';
 import Image from 'next/image'
 import Select from './components/select'
+import { ChangeEvent, useCallback, useState } from 'react';
 
 const coffeeShopItems = [
-  { id: 1, item_name: 'Espresso', target_measurement: 30, delta: 5 },
-  { id: 2, item_name: 'Double Espresso', target_measurement: 60, delta: 8 },
-  { id: 3, item_name: 'Latte Macchiato', target_measurement: 230, delta: 10 },
-  { id: 4, item_name: 'Cappuccino', target_measurement: 150, delta: 10 }
+  { id: 1, description: 'Espresso', target_measurement: 30, delta: 5 },
+  { id: 2, description: 'Double Espresso', target_measurement: 60, delta: 8 },
+  { id: 3, description: 'Latte Macchiato', target_measurement: 230, delta: 10 },
+  { id: 4, description: 'Cappuccino', target_measurement: 150, delta: 10 }
 ];
 
 const coffeeShopIngredients = [
@@ -18,34 +20,64 @@ const coffeeShopIngredients = [
 ];
 
 export default function Home() {
+  const [sensor, setSensor] = useState(1);
+  const [item, setItem] = useState(coffeeShopItems[0]);
+  const [ingredient, setIngredient] = useState(coffeeShopIngredients[0]);
+
+  const [sliderValue, setSliderValue] = useState(item.target_measurement);
+
+  const min = item.target_measurement - item.delta;
+  const max = item.target_measurement + item.delta
+
+  const sensorChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setSliderValue(Number(e.target.value));
+    fetch("/api", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "sensor",
+        target: e.target.value,
+        sensor_id: 1,
+      }),
+    })
+  }, []);
+
+  const onItemChange = useCallback((value: any) => {
+    setItem(value);
+    setSliderValue(value.target_measurement);
+  }, []);
+
+  const onIngredientChange = useCallback((value: any) => {
+    setIngredient(value);
+  }, []);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-sans text-center">
-          <h1 className='text-4xl'>Operation Coffee Shop</h1>
+          <h1 className='text-4xl'>Operational coffee shop</h1>
           {/* Materialize Booth */}
       </div>
 
       <div>
         <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]"/>
 
-        <Select label="Sensor" options={coffeeShopItems.map(x => ({ ...x, description: x.item_name }))} />
+        <Select onChange={onItemChange} value={item} label="Sensor" options={coffeeShopItems} />
         <div className="flex flex-col space-y-2 p-2 w-80">
-          <input type="range" className='w-full' />
+          <input value={sliderValue} min={min} max={max} type="range" className='mt-4 w-full rounded-lg bg-gray-100 appearance-none' onChange={sensorChange} />
           <ul className="flex justify-between w-full px-[10px]">
-              <li className="flex justify-center relative"><span className="absolute">0</span></li>
-              <li className="flex justify-center relative"><span className="absolute">20</span></li>
-              <li className="flex justify-center relative"><span className="absolute">25</span></li>
+              <li className="flex justify-center relative"><span className="absolute">{min}</span></li>
+              <li className="flex justify-center relative"><span className="absolute">{item.target_measurement}</span></li>
+              <li className="flex justify-center relative"><span className="absolute">{max}</span></li>
           </ul>
       </div>
 
         <div className='mt-10'>
-          <Select label="Ingredients" options={coffeeShopIngredients} />
+          <Select label="Ingredients" options={coffeeShopIngredients} onChange={onIngredientChange} value={ingredient} />
         </div>
 
         <div className='mt-10'>
           <div>
           <div>
-            <label htmlFor="amount" className="block text-sm font-medium leading-6 ">
+            <label htmlFor="amount" className="block text-sm text-gray-200 font-medium leading-6 ">
               Amount
             </label>
             <div className="mt-2 flex flex-col">
