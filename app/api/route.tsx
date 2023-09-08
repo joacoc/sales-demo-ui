@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
             case "sensor": {
                 const { target, sensor_id } = content;
                 console.log("Sending to: ", process.env.API_ENDPOINT + `/update_sensor?sensor_id=${sensor_id}&target=${target}`);
-                // fetch(process.env.API_ENDPOINT + `/update_sensor?sensor_id=${sensor_id}&target=${target}`, { method: "POST" });
+                fetch(process.env.API_ENDPOINT + `/update_sensor?sensor_id=${sensor_id}&target=${target}`, { method: "POST" });
 
                 return NextResponse.json({});
             }
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
             case "resupply": {
                 const { booth, ingredient, amount } = content;
                 console.log("Sending to: ", process.env.API_ENDPOINT + `/resupply?ingredient_id=${ingredient.id}&amount=${amount}&delivered_to=${booth.id}`);
-                // fetch(process.env.API_ENDPOINT + `/resupply?ingredient_id=${ingredient}&amount=${amount}&delivered_to=${booth}`, { method: "POST" });
+                fetch(process.env.API_ENDPOINT + `/resupply?ingredient_id=${ingredient}&amount=${amount}&delivered_to=${booth}`, { method: "POST" });
 
                 return NextResponse.json({});
             }
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
             case "manufacturing": {
                 const { item } = content;
                 console.log("Sending to: ", process.env.API_ENDPOINT + `/update_manufacturing?item_id=${item.id}&sensor_id=1`);
-                // fetch(process.env.API_ENDPOINT + `/update_manufacturing?item_id=${item.id}&sensor_id=1`, { method: "POST" });
+                fetch(process.env.API_ENDPOINT + `/update_manufacturing?item_id=${item.id}&sensor_id=1`, { method: "POST" });
 
                 return NextResponse.json({});
             }
