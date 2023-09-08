@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image'
 import Select from './components/select'
-import { ChangeEvent, useCallback, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 const coffeeShopItems = [
   { id: 1, description: 'Espresso', target_measurement: 30, delta: 5 },
@@ -19,35 +19,92 @@ const coffeeShopIngredients = [
   { id: 6, description: 'Cream' }
 ];
 
+const booths = [
+  { id: 1, description: 'Materialize Booth'},
+  { id: 2, description: 'Hallway Booth'},
+  { id: 3, description: 'Keynote Booth'}
+]
+
 export default function Home() {
-  const [sensor, setSensor] = useState(1);
+  // This sensor is always the same one.
+  const [sensor, ] = useState(1);
   const [item, setItem] = useState(coffeeShopItems[0]);
   const [ingredient, setIngredient] = useState(coffeeShopIngredients[0]);
+  const [booth, setBooth] = useState(booths[0]);
+  const [amount, setAmount] = useState(0);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const [sliderValue, setSliderValue] = useState(item.target_measurement);
 
-  const min = item.target_measurement - item.delta;
-  const max = item.target_measurement + item.delta
+  const min = 0;
+  const max = 300;
 
   const sensorChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSliderValue(Number(e.target.value));
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(() => {
+      fetch("/api", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "sensor",
+          target: e.target.value,
+          sensor_id: sensor,
+        }),
+      });
+    }, 300);  // 300ms delay
+  }, [sensor]);
+
+  const manufacturingChange = useCallback((item: { id: number, description: string }) => {
     fetch("/api", {
       method: "POST",
       body: JSON.stringify({
-        type: "sensor",
-        target: e.target.value,
-        sensor_id: 1,
+        type: "manufacturing",
+        item,
       }),
-    })
+    });
   }, []);
+
+  const onResupplyClick = useCallback(() => {
+    fetch("/api", {
+      method: "POST",
+      body: JSON.stringify({
+        type: "resupply",
+        booth,
+        ingredient,
+        amount,
+      }),
+    });
+  }, [booth, amount, ingredient]);
 
   const onItemChange = useCallback((value: any) => {
     setItem(value);
+    manufacturingChange(value);
     setSliderValue(value.target_measurement);
-  }, []);
+  }, [manufacturingChange]);
 
   const onIngredientChange = useCallback((value: any) => {
     setIngredient(value);
+  }, []);
+
+  const onBoothChange = useCallback((value: any) => {
+    setBooth(value);
+  }, []);
+
+  useEffect(() => {
+    // Set the correct manufacturing only once.
+    manufacturingChange(item);
+
+    return () => {
+      if (debounceTimer.current) {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        clearTimeout(debounceTimer.current);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -65,37 +122,41 @@ export default function Home() {
           <input value={sliderValue} min={min} max={max} type="range" className='mt-4 w-full rounded-lg bg-gray-100 appearance-none' onChange={sensorChange} />
           <ul className="flex justify-between w-full px-[10px]">
               <li className="flex justify-center relative"><span className="absolute">{min}</span></li>
-              <li className="flex justify-center relative"><span className="absolute">{item.target_measurement}</span></li>
+              <li className="flex justify-center relative"><span className="absolute">150</span></li>
               <li className="flex justify-center relative"><span className="absolute">{max}</span></li>
           </ul>
       </div>
 
         <div className='mt-10'>
-          <Select label="Ingredients" options={coffeeShopIngredients} onChange={onIngredientChange} value={ingredient} />
+          <Select label="Booth" options={booths} onChange={onBoothChange} value={booth} />
         </div>
 
-        <div className='mt-10'>
-          <div>
-          <div>
+        <div className='mt-2'>
+          <Select label="Ingredient" options={coffeeShopIngredients} onChange={onIngredientChange} value={ingredient} />
+          <div className='mt-2'>
             <label htmlFor="amount" className="block text-sm text-gray-200 font-medium leading-6 ">
               Amount
             </label>
             <div className="mt-2 flex flex-col">
               <input
-                type="number"
+                type="text"
                 name="amount"
                 id="amount"
+                pattern="^-?\d+(\.\d+)?$"
+                // min={1}
+                value={amount}
                 className="block w-full rounded-md border-0 px-0.5 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 placeholder="100"
+                onChange={(e) => { if (Number.isSafeInteger(Number(e.target.value))) { setAmount(Number(e.target.value)) } }}
               />
               <button
                 type="button"
                 className="mt-2 rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                onClick={onResupplyClick}
               >
                 Resupply
               </button>
             </div>
-          </div>
           </div>
         </div>
       </div>
@@ -103,14 +164,12 @@ export default function Home() {
       <div className="">
           <a
             className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
             target="_blank"
             rel="noopener noreferrer"
           >
             <Image
               src="/materialize.svg"
               alt="Materialize Logo"
-              className="dark:invert"
               width={120}
               height={48}
               priority
