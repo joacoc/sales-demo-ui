@@ -2,6 +2,7 @@
 import Image from 'next/image'
 import Select from './components/select'
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { AnalyticsBrowser } from '@segment/analytics-next';
 
 const coffeeShopItems = [
   { id: 1, description: 'Espresso', target_measurement: 30, delta: 5 },
@@ -28,11 +29,22 @@ const booths = [
 export default function Home() {
   // This sensor is always the same one.
   const [sensor, ] = useState(1);
+  const ref = useRef<AnalyticsBrowser | null>(null);
   const [item, setItem] = useState(coffeeShopItems[0]);
   const [ingredient, setIngredient] = useState(coffeeShopIngredients[0]);
   const [booth, setBooth] = useState(booths[0]);
   const [amount, setAmount] = useState(0);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (ref.current === null) {
+      const analytics = AnalyticsBrowser.load({ writeKey: '1TjwHjUXtOjQ3pdQBG35htHMbFaYDisL' });
+      analytics.identify({
+        subscriptionStatus: 'inactive'
+      });
+      ref.current = analytics;
+    }
+  }, [ref]);
 
   const [sliderValue, setSliderValue] = useState(item.target_measurement);
 
